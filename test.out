@@ -1,0 +1,170 @@
+
+
+0 Total Database Search Results
+
+Pvalue	SeqName	Pseudosig	Index0	MatchingSubSeq0	Index1	MatchingSubSeq1	Index2	MatchingSubSeq2	Index3	MatchingSubSeq3	Index4	MatchingSubSeq4	Index5	MatchingSubSeq5	Index6	MatchingSubSeq6	Index7	MatchingSubSeq7	Index8	MatchingSubSeq8	Index9	MatchingSubSeq9	
+ProfileFragment 0:
+3CYJD: -----sggftsy
+1MNSA: -ay-dshsldg-
+1MRAA: -ay-dshsldg-
+2DW7P: FVY-AAGGYY--
+2HNED: --yttspgwlgy
+1YEYD: --yttspgwl--
+2PP0B: ----TSGGFLHT
+3CK5D: -vy-aggidlel
+2PP1F: -cyntsggflht
+2GDQB: -vy-asfqsy--
+2OVLD: -vy-aggidlel
+2HXTA: --yttspgwlgy
+2GGEH: -vy-asfqsy--
+1MDRA: -AY-DSHSLDG-
+2MNRA: -ay-dshsldg-
+
+
+ProfileFragment 1:
+3CYJD: FSAHCA-
+1MNSA: -sshlfq
+1MRAA: -SSHLFQ
+2DW7P: -IPHGGH
+2HNED: -FPHAGG
+1YEYD: -fphagg
+2PP0B: -APHFAM
+3CK5D: -TSHGVH
+2PP1F: -APHFAM
+2GDQB: -sahayd
+2OVLD: -TSHGVH
+2HXTA: -FPHAGG
+2GGEH: -sahayd
+1MDRA: -sshlfq
+2MNRA: -sshlfq
+
+
+ProfileFragment 2:
+3CYJD: -AGEY--
+1MNSA: --gen--
+1MRAA: --GEN--
+2DW7P: --GEN--
+2HNED: --GEH--
+1YEYD: --geh--
+2PP0B: atgemlt
+3CK5D: -GGEN--
+2PP1F: --GEM--
+2GDQB: -ggen--
+2OVLD: -GGEN--
+2HXTA: --GEH--
+2GGEH: aggen--
+1MDRA: --gen--
+2MNRA: --gen--
+
+
+ProfileFragment 3:
+3CYJD: qadvtr
+1MNSA: MPDAMK
+1MRAA: mpnamk
+2DW7P: qfdcal
+2HNED: qidaar
+1YEYD: QIDAAR
+2PP0B: qpdapr
+3CK5D: epdvsn
+2PP1F: qpdapr
+2GDQB: QPDVMH
+2OVLD: epdvsn
+2HXTA: qidaar
+2GGEH: QPDVMH
+1MDRA: MPDAMK
+2MNRA: MPDAMK
+
+
+ProfileFragment 4:
+3CYJD: kmkvgr
+1MNSA: KTKIGY
+1MRAA: ktkigy
+2DW7P: kmkigg
+2HNED: klkvga
+1YEYD: KLKVGA
+2PP0B: klkvgq
+3CK5D: kmkvgr
+2PP1F: klkvgq
+2GDQB: KVKIGG
+2OVLD: kmkvgr
+2HXTA: klkvga
+2GGEH: KVKIGG
+1MDRA: KTKIGY
+2MNRA: KTKIGY
+
+
+ProfileFragment 5:
+3CYJD: HLEYF
+1MNSA: -lerl
+1MRAA: -LERL
+2DW7P: -NESY
+2HNED: aiefv
+1YEYD: AIEFV
+3CK5D: -MEAH
+2PP1F: -LEHF
+2GDQB: PIEWD
+2OVLD: -MEAH
+2HXTA: aiefv
+2GGEH: piewd
+1MDRA: -lerl
+2MNRA: -lerl
+
+
+ProfileFragment 6:
+3CYJD: MVDAN
+1MNSA: mvdyn
+1MRAA: MVDYN
+2DW7P: AVDAN
+2HNED: AVDAN
+1YEYD: avdan
+2PP0B: MVDAN
+3CK5D: MVDAN
+2PP1F: MVDAN
+2GDQB: ildan
+2OVLD: MVDAN
+2HXTA: AVDAN
+2GGEH: ildan
+1MDRA: mvdyn
+2MNRA: mvdyn
+
+
+ProfileFragment 7:
+2HXTA: --a--
+3CYJD: vyg--
+2GGEH: --ANG
+1MRAA: V-GT-
+2DW7P: sng--
+1YEYD: --a--
+2HNED: --a--
+2GDQB: --ANG
+
+
+ProfileFragment 8:
+3CYJD: ESDG
+1MNSA: VHTA
+1MRAA: VHTA
+2DW7P: IRNA
+2HNED: -SDA
+1YEYD: -SDA
+2PP0B: -SDA
+2PP1F: -SDA
+2GDQB: -GD-
+2HXTA: GSDA
+2GGEH: -GD-
+1MDRA: VHTA
+2MNRA: VHTA
+
+
+ProfileFragment 9:
+2HXTA: glc
+1MNSA: -w-
+1MDRA: -w-
+1MRAA: -W-
+2DW7P: G--
+1YEYD: GLC
+2HNED: glc
+3CK5D: -Y-
+2MNRA: -w-
+2PP1F: -W-
+2OVLD: -Y-
+

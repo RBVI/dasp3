@@ -1,0 +1,22 @@
+1. Change X's back to amino acids
+	 Done.
+
+2. Align based on fragments rather than the entire signature
+
+3. Use the longest fragment to form a motif rather than the shortest fragment
+
+4. Ability to input a profile and search the database
+
+5. Report the ASP score for the profile used in the search
+
+6. Report all proteins that get the same score (100% sequence identity)
+
+7. Individual motif scores for each hit and individual ASP scores for each motif
+
+8. The position of the motifs in each of the input proteins
+
+10. Parallel processing
+
+11. Report changes
+
+12. Update to current bioJava
