@@ -34,7 +34,9 @@ import java.io.File;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * An ActiveSiteSignature is a sequence that is formed by concatenating
@@ -45,6 +47,9 @@ public class ActiveSiteSignature {
 	private DaspStructure struct = null;
 	private List<Residue> keyResidues = null;
 	private List<SequenceFragment> fragments = null;
+	private List<SequenceFragment> residueFrags = null;
+	private List<SequenceFragment> otherFrags = null;
+	private Map<Integer, ActiveSiteSignature> fragSigCache = null;
 	private String signature = null;
 	private double radius = 10.0;
 
@@ -58,7 +63,18 @@ public class ActiveSiteSignature {
 		this.struct = struct;
 	}
 
+	public ActiveSiteSignature (DaspStructure struct, List<Residue> residues, SequenceFragment frag) {
+		this.keyResidues = residues;
+		this.struct = struct;
+		fragments = new ArrayList<SequenceFragment>();
+		fragments.add(frag);
+		signature = frag.getSequence(false);
+	}
+
 	public String getSignature(double profileRadius) {
+		if (signature != null && keyResidues == null)
+			return signature;
+
 		if (signature == null || radius != profileRadius) {
 			// calculate the ASSig
 			//Should this be performed in the constructor?
@@ -68,11 +84,17 @@ public class ActiveSiteSignature {
 			this.signature = alternate(fragments);
 		}
 
+		// System.out.println("signature = "+signature);
+
 		return signature;
 	}
 
 	public String getPdbId(){
 		return struct.getPdbId();
+	}
+
+	public List<SequenceFragment> getFragments() {
+		return fragments;
 	}
 
 	public String getFragmentsInContext() {
@@ -81,6 +103,43 @@ public class ActiveSiteSignature {
 			frag.makeUpper(pdbSequence);
 		}
 		return pdbSequence;
+	}
+
+	public ActiveSiteSignature getFragmentAsSig(int frag) {
+		if (fragSigCache == null)
+			fragSigCache = new HashMap<Integer, ActiveSiteSignature>();
+
+		if (fragSigCache.containsKey(frag))
+			return fragSigCache.get(frag);
+
+		SequenceFragment newFrag = null;
+		if (frag >= fragments.size()) {
+			newFrag = new SequenceFragment();
+			fragments.add(newFrag);
+			otherFrags.add(newFrag);
+		} else if (frag >= residueFrags.size()) {
+			newFrag = otherFrags.get(frag-residueFrags.size());
+		} else {
+			newFrag = residueFrags.get(frag);
+		} 
+
+		ActiveSiteSignature aSig = new ActiveSiteSignature(struct, keyResidues, newFrag);
+		fragSigCache.put(frag, aSig);
+		return aSig;
+	}
+
+	public int keyFragCount() {
+		return residueFrags.size();
+	}
+
+	public void removeFragment(int fragment) {
+		if (fragment >= fragments.size())
+			return;
+		if (fragment < residueFrags.size()) {
+			residueFrags.remove(fragment);
+		} else if (fragment >= residueFrags.size()) {
+			otherFrags.remove(fragment-residueFrags.size());
+		}
 	}
 
 	private String alternate(List<SequenceFragment>frags) {
@@ -114,33 +173,43 @@ public class ActiveSiteSignature {
 		String pdbFile = null;
 		String chain = null;
         
-		int split1 = input.indexOf(':');
+		String[] tokens = input.trim().split(":");
 
-		if (split1 < 0)
+		if (tokens.length < 2)
 			throw new IOException("No ':' in input string: "+input);
 
-		int chainStart = input.substring(0,split1).indexOf('#');
+		int chainStart = tokens[0].indexOf('#');
 		if (chainStart > 0) {
-			chain = input.substring(chainStart+1, split1);
-			pdbFile = input.substring(0,chainStart);
+			chain = tokens[0].substring(chainStart+1);
+			pdbFile = tokens[0].substring(0,chainStart);
 		} else {
-			pdbFile = input.substring(0, split1);
+			pdbFile = tokens[0];
 		}
 
-		String[] residues = input.substring(split1+1).split(",");
-		if (residues.length == 0)
-			throw new IOException("No residues in input string: "+input);
+		if (tokens.length == 2) {
+			String[] residues = tokens[1].split(",");
+			if (residues.length == 0)
+				throw new IOException("No residues in input string: "+input);
 
-		struct = new DaspStructure(database, pdbFile, chain);
+			struct = new DaspStructure(database, pdbFile, chain);
 
-		keyResidues = new ArrayList();
-		for (int residue = 0; residue < residues.length; residue++) {
-			Residue r = struct.getResidue(residues[residue]);
-			if (r != null) {
-				keyResidues.add(r);
-			} else {
-				throw new IOException("PDB file "+pdbFile+" doesn't have residue "+residues[residue]);
+			keyResidues = new ArrayList();
+			for (int residue = 0; residue < residues.length; residue++) {
+				Residue r = struct.getResidue(residues[residue]);
+				if (r != null) {
+					keyResidues.add(r);
+				} else {
+					throw new IOException("PDB file "+pdbFile+" doesn't have residue "+residues[residue]);
+				}
 			}
+		} else if (tokens.length == 3) {
+			// We're getting the signature -- just read it and
+			// skip all the work calculating it
+			signature = tokens[2].trim();
+			struct = new DaspStructure(database, pdbFile, chain);
+			// TODO: Create SequenceFragments!!!!!
+			// Read through the signature a character at a time
+			// to create the fragments
 		}
 	}
 
@@ -151,14 +220,17 @@ public class ActiveSiteSignature {
    * @return  Returns the list of fragments that are within the defined radius of at least 1 key residue.
    */
 	private List<SequenceFragment> calculateASSig(double radius) {
-			List<SequenceFragment> returnFrags = new ArrayList();
+			List<SequenceFragment> returnFrags = new ArrayList<SequenceFragment>();
+			residueFrags = new ArrayList<SequenceFragment>();
+			otherFrags = new ArrayList<SequenceFragment>();
 	
 			//not sure this is the best way to start this off.
 			SequenceFragment tempFrag = new SequenceFragment();  //starts the first fragment object
 			int prevResId = 0;  //initializes the previous residue ID
+			boolean haveKey = false;
 			for (Residue curRes: struct.getResidues())
 			{ 
-				for(Residue keyRes: keyResidues)
+				for (Residue keyRes: keyResidues)
 				{
 					// System.out.println("Comparing: "+curRes.getAA()+" to "+keyRes.getAA());
 					//get centers
@@ -170,11 +242,21 @@ public class ActiveSiteSignature {
 					{
 							if(prevResId > 0 && curRes.getIndex() != prevResId+1)
 							{
-								returnFrags.add(tempFrag);
+								if (tempFrag.getResidueCount() >= 4) {
+									returnFrags.add(tempFrag);
+									if (haveKey)
+										residueFrags.add(tempFrag);
+									else
+										otherFrags.add(tempFrag);
+								}
 								tempFrag = new SequenceFragment();
+								haveKey = false;
 							}
 
-							tempFrag.addFragRes(curRes); //if true, add residue to fragments list and break
+							int keyIndex = keyResidues.indexOf(curRes);
+							tempFrag.addFragRes(curRes, keyIndex); //if true, add residue to fragments list and break
+							if (keyIndex >= 0) haveKey = true;
+
 							prevResId = curRes.getIndex();
 							break;
 					} 
@@ -182,7 +264,15 @@ public class ActiveSiteSignature {
 				}
 
 			}
-			returnFrags.add(tempFrag); // Add the last fragment
+
+			if (tempFrag.getResidueCount() >= 4) {
+				if (haveKey)
+					residueFrags.add(tempFrag);
+				else
+					otherFrags.add(tempFrag);
+
+				returnFrags.add(tempFrag); // Add the last fragment
+			}
 
 			//By this point we should have all our fragments that are within the radius
 			//of the active site keyResidues, they should be in sequencial order,
@@ -207,4 +297,76 @@ public class ActiveSiteSignature {
 				Math.pow((loc2.getZ() - loc1.getZ()), 2));
 	} //end dist
 
+	/**
+ 	 * Extend an alignment string.  NOTE: this method only operates on the
+ 	 * first fragment.  It assumes that this is being used in fragment-oriented
+ 	 * mode.
+ 	 *
+ 	 * @param sequence the alignment string (with dashes)
+ 	 * @return extended sequence
+ 	 */
+	public String extendAlignment(String alignmentString) {
+		if (fragments.size() > 1) return null;
+		// System.out.println("Extending "+alignmentString+" from "+struct.getPdbId());
+		SequenceFragment frag = fragments.get(0);
+		String newAlignment = "";
+
+		int leadingDashes = countLeadingDashes(alignmentString);
+		if (leadingDashes == alignmentString.length())
+			return alignmentString;
+
+		int trailingDashes = countTrailingDashes(alignmentString);
+
+		Residue leadingResidue = frag.getFragRes(0);
+		Residue trailingResidue = frag.getFragRes(frag.getResidueCount()-1);
+
+		int leadingIndex = leadingResidue.getIndex();
+		int trailingIndex = trailingResidue.getIndex();
+		// System.out.println("leadingIndex = "+leadingIndex+" leading dashes = "+leadingDashes);
+		// System.out.println("trailingIndex = "+trailingIndex+" trailing dashes = "+trailingDashes);
+		for (int r = leadingIndex-leadingDashes; r<leadingIndex; r++) {
+			if (r >=0 && struct.getResidues().get(r) != null) {
+				newAlignment += struct.getResidues().get(r).getAA();
+			} else {
+				newAlignment += "-";
+			}
+		}
+
+		newAlignment += alignmentString.substring(leadingDashes, alignmentString.length()-trailingDashes);
+
+		if (trailingDashes > 0) {
+			int endIndex = trailingIndex+trailingDashes+1;
+			for (int r = trailingIndex+1; r < endIndex; r++) {
+				// System.out.println("Looking for residue "+r+": "+struct.getResidues().get(r).getAA());
+				// System.out.println("   Residue count = "+frag.getResidueCount());
+				if (r < struct.getResidues().size() && struct.getResidues().get(r) != null) {
+					// System.out.println("Appending....");
+					newAlignment += struct.getResidues().get(r).getAA();
+				} else
+					newAlignment += "-";
+			}
+		}
+		// System.out.println("New alignment = "+newAlignment);
+		return newAlignment;
+	}
+
+	private int countLeadingDashes(String alignmentString) {
+		int count = 0;
+		for (int i = 0; i < alignmentString.length(); i++) {
+			if (alignmentString.charAt(i) != '-')
+				break;
+			count++;
+		}
+		return count;
+	}
+
+	private int countTrailingDashes(String alignmentString) {
+		int count = 0;
+		for (int i = alignmentString.length()-1; i >= 0; i--) {
+			if (alignmentString.charAt(i) != '-')
+				break;
+			count++;
+		}
+		return count;
+	}
 }

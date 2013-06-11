@@ -1,0 +1,97 @@
+Active Site Signature for: 1CJX#D: 240,311,322 is IDHLTHNgiqhvaflQIFSEvffefi
+Active Site Signature for: 1SP8#A: 301,374,387 is DHIVGNgvqhmalaLLQIFTKtlfleii
+Active Site Signature for: 1SQD#A: 287,360,373 is LDHAVGNglqhlalmLLQIFTKtifieii
+Active Site Signature for: 1SQI#B: 266,336,349 is IDHIVGNgvqhialrQIFTKPtlflevi
+Active Site Signature for: 1T47#A: 270,336,349 is IDHCVGNgvqhialnQIFTKtvffeii
+Active Site Signature for: 1ZSW#A: 222,260,270 is HHISMsihhlaiSSGIIslyfrILFEIAT
+Active Site Signature for: 2R5V#B: 241,307,320 is IDHFAICgvqhiafnsQIFTASiffevi
+Active Site Signature for: 3ISQ#A: 266,336,349 is IDHIVGNgvqhialkQIFTKPtlflevi
+
+Profile fragment: 
+1SQDA: glqhlalm-
+3ISQA: gvqhialk-
+2R5VB: gvqhiafns
+1ZSWA: sihhlai--
+1SP8A: gvqhmala-
+1CJXD: giqhvafl-
+1T47A: gvqhialn-
+1SQIB: gvqhialr-
+  Score: 0.2111111111111111
+
+Profile fragment: 
+1SQDA: llqiftk-
+3ISQA: LLqiftkp
+2R5VB: LFqiftas
+1ZSWA: FKslyfr-
+1SP8A: llqiftk-
+1CJXD: LLqifse-
+1T47A: LLqiftk-
+1SQIB: LLqiftkp
+  Score: 0.02500000000000001
+
+Profile fragment: 
+1SQDA: tifieii-
+3ISQA: tlflevi-
+2R5VB: Tiffevi-
+1ZSWA: Gilfeiat
+1SP8A: tlfleii-
+1CJXD: Pvffefi-
+1T47A: tvffeii-
+1SQIB: tlflevi-
+  Score: 0.15000000000000002
+
+Profile fragment: 
+1SQDA: ldhavgn
+3ISQA: idhivgn
+2R5VB: idhfaic
+1ZSWA: Hhhism-
+1SP8A: Fdhivgn
+1CJXD: idhlthn
+1T47A: idhcvgn
+1SQIB: idhivgn
+  Score: 0.08571428571428573
+
+Profile fragment: 
+1SQDA: -----
+3ISQA: -----
+2R5VB: -----
+1ZSWA: ssgii
+1SP8A: -----
+1CJXD: -----
+1T47A: -----
+1SQIB: -----
+  Score: -2.5
+
+ActiveSiteProfile: 
+1SQDA: GLQHLALM-llqiftk-TIFIEII-ldhavgn-----
+3ISQA: GVQHIALK-llqiftkpTLFLEVI-idhivgn-----
+2R5VB: GVQHIAFNSlfqiftasTIFFEVI-idhfaic-----
+1ZSWA: SIHHLAI--fkslyfr-GILFEIAThhhism-SSGII
+1SP8A: GVQHMALA-llqiftk-TLFLEII-fdhivgn-----
+1CJXD: GIQHVAFL-llqifse-PVFFEFI-idhlthn-----
+1T47A: GVQHIALN-llqiftk-TVFFEII-idhcvgn-----
+1SQIB: GVQHIALR-llqiftkpTLFLEVI-idhivgn-----
+  Score: 0.03783783783783785
+
+Seq gi|7766898|pdb|1CJX|A PASSED
+Seq gi|7766899|pdb|1CJX|B PASSED
+Seq gi|7766900|pdb|1CJX|C PASSED
+Seq gi|7766901|pdb|1CJX|D PASSED
+Seq gi|170292354|pdb|2R5V|A PASSED
+Seq gi|170292355|pdb|2R5V|B PASSED
+Seq gi|258588704|pdb|3ISQ|A PASSED
+Seq gi|259090219|pdb|3GM5|A PASSED
+Seq gi|52695553|pdb|1SQI|A PASSED
+Seq gi|52695554|pdb|1SQI|B PASSED
+Seq gi|55669757|pdb|1SP9|A PASSED
+Seq gi|55669758|pdb|1SP9|B PASSED
+Seq gi|50513702|pdb|1T47|A PASSED
+Seq gi|50513703|pdb|1T47|B PASSED
+Seq gi|52695552|pdb|1SQD|A PASSED
+Seq gi|52695750|pdb|1TFZ|A PASSED
+Seq gi|52695751|pdb|1TG5|A PASSED
+Seq gi|55669753|pdb|1SP8|A PASSED
+Seq gi|55669754|pdb|1SP8|B PASSED
+Seq gi|55669755|pdb|1SP8|C PASSED
+Seq gi|55669756|pdb|1SP8|D PASSED
+Seq gi|71042475|pdb|1ZSW|A PASSED

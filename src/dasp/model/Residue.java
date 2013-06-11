@@ -105,6 +105,7 @@ public class Residue {
 		aaMap.put("HIP",'H');
 		aaMap.put("HYP",'P');
 		aaMap.put("MSE",'M');
+		aaMap.put("SNC",'C');
 		aaMap.put("+N",'N');
 	}
 

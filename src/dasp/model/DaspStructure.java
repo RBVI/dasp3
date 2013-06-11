@@ -222,6 +222,12 @@ public class DaspStructure {
 		return null;
 	}
 
+	public Residue getResidue(int index) {
+		if (residueMap.containsKey(String.valueOf(index)))
+			return residueMap.get(String.valueOf(index));
+		return null;
+	}
+
 	/**
 	 * This method reads and parses the pdb file and creates the internal
 	 * structures to represent the protein structure.  Note that as a by-product

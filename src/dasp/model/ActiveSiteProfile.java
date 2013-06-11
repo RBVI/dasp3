@@ -46,25 +46,73 @@ import dasp.algorithms.Align;
  * the ActiveSiteSignatures of a group of structures.
  */
 public class ActiveSiteProfile extends Alignment {
-	List<ActiveSiteSignature>signatureList = null;
 
-	public ActiveSiteProfile(List<ActiveSiteSignature>signatures, Align alignmentMethod, double radius) {
+	// NOTE: this assumes that each profile contains a single column (one fragment)
+	static public ActiveSiteProfile concatenate(List<ActiveSiteProfile> profileList) {
+		int sequenceCount = profileList.get(0).getSequences().size();
+		List<String> newAlignment = new ArrayList<String>();
+		for (int row = 0; row < sequenceCount; row++) {
+			boolean upper = true;
+			String aln = "";
+			for (ActiveSiteProfile profile: profileList) {
+				String seq = profile.getAlignmentString(row);
+				if (upper) {
+					aln += seq.toUpperCase();
+					upper = false;
+				} else {
+					aln += seq.toLowerCase();
+					upper = true;
+				}
+			}
+			newAlignment.add(aln);
+		}
+
+		return new ActiveSiteProfile(profileList.get(0), newAlignment);
+	}
+
+	public ActiveSiteProfile(ActiveSiteProfile template, List<String>alignment) {
 		super();
-		signatureList = signatures;
+		List<String> sequences = template.getSequences();
+		for (int strIndex = 0; strIndex < sequences.size(); strIndex++) {
+			String seq = sequences.get(strIndex);
+			String[] splitStr = seq.split("\t");
+			String pdbId = splitStr[0].trim();
+			addSequence(pdbId+"\t"+alignment.get(strIndex));
+			alignmentMap.put(pdbId, alignment.get(strIndex));
+			// NOTE: not updating name map at this point
+		}
+	}
+
+	public ActiveSiteProfile(List<ActiveSiteSignature>signatureList, Align alignmentMethod, double radius) {
+		super();
 		method = alignmentMethod;
+
 		for (ActiveSiteSignature sig: signatureList) {
 		  //sig.getSignature returns a String with fragments in upper and lower case.
 		  //for running through Clustal it needs to be in fasta format.
 		  //possibly implement that following so that each Sequence entry is already in fasta format?
 		  //Actually, the Alignment class assumes the sequence string is in fasta format.
 		  //possibly should add a getFastSignature() method to ActiveSiteSignature() class, and have the signature calculated in advance.
+		  // System.out.println("ASP adding sequence: "+sig.getPdbId()+"\t"+sig.getSignature(radius));
 		  addSequence(sig.getPdbId()+"\t"+sig.getSignature(radius));
+			// System.out.println("Adding sequence: "+sig.getPdbId()+": "+sig.getSignature(radius));
 		}
 
 		doAlign();
+		// System.out.println(getAlignmentAsString());
+
+		for (ActiveSiteSignature sig: signatureList) {
+			if (sig.getFragments().size() > 1) break;
+
+			String alignment = alignmentMap.get(sig.getPdbId());
+			String newAlignment = sig.extendAlignment(alignment);
+			alignmentMap.put(sig.getPdbId(), newAlignment);
+		}
+		// System.out.println(getAlignmentAsString());
 	}
 
 	public ActiveSiteProfile(File profilePath) {
+		super();
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(profilePath));
 			String line = null;
@@ -74,6 +122,7 @@ public class ActiveSiteProfile extends Alignment {
 				if (line.startsWith("#")) continue;
 				line = line.trim();
 				if (line.length() == 0) continue;
+				System.out.println("Line: "+line);
 				String[] split = line.split("\t");
 				if (split.length != 2) {
 					System.err.println("Input error in "+profilePath+" line #"+lineNumber+": input not tab-delimited"); 
@@ -87,7 +136,7 @@ public class ActiveSiteProfile extends Alignment {
 			System.exit(1);
 		}
 	}
-	
+
 	/**
 	 * Identifies the motifs (profile fragments) of the ASP
 	 *
@@ -149,7 +198,7 @@ public class ActiveSiteProfile extends Alignment {
 			//loops through each sequence in the alignemnt (each row k)
 			for(int row = 0; row < sequences.length; row++){
 				int fragmentLength = pieceOfFrag(sequences[row], column); //temp must be the length of the fragment.
-				if(fragmentLength >= 3){
+				if(fragmentLength >= 4){
 					if(fragmentLength < minBox){
 						minIndex = row;
 						minBox = fragmentLength;
@@ -202,7 +251,7 @@ public class ActiveSiteProfile extends Alignment {
 					}
 				}
 				//if at least 50% of the sequences are included in the motif then consider it a motif for searching
-				if(counter >= Math.ceil((double)sequences.length/(double)2)) {
+				if(counter > Math.ceil((double)sequences.length/(double)2)) {
 					list.add(alignment);
 				}
 				column = (boxEnd + 1); //increment i to be just after the last motif box searched
@@ -224,7 +273,6 @@ public class ActiveSiteProfile extends Alignment {
 		//instead of writing it directly to a file.
 		//The extractResidues() method is pasted below and commented out for reference.
 	}
-
 
 	//check if a piece of a fragment exists at the current position in the profile
 	private int pieceOfFrag(String s, int index){

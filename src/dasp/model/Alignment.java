@@ -32,8 +32,10 @@ package dasp.model;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import dasp.algorithms.Align;
 
@@ -51,6 +53,11 @@ public class Alignment {
 	private int gaps = 0;
 	private int length = 0;
 
+	private static String[] strongClass = {"STA", "NEQK", "NHQK", "NDEQ", "QHRK", 
+	                                       "MILV", "MILF", "HY", "FYW"};
+	private static String[] weakClass = {"CSA", "ATV", "SAG", "STNK", "STPA", "SGND", 
+	                                     "SNDEQK", "NDEQHK", "NEQHRK", "FVLIM", "HFY"};
+
 	public Alignment () {
 		seqs = new ArrayList();
 		this.alignmentMap = new HashMap();
@@ -58,9 +65,15 @@ public class Alignment {
 	}
 
 	public void doAlign() {
+		// System.out.println("doAlign: sequences:");
+		// for (String seq: seqs)
+		// 	System.out.println("     "+seq);
 		alignmentScore = method.align(seqs);
 		alignmentMap = method.getAlignment();
 		percentIdentity = method.getIdentity();
+		// System.out.println("doAlign: alignment:");
+		// for (int i=0; i < seqs.size(); i++)
+		// 	System.out.println("     "+getAlignmentString(i));
 	}
 
 	/**
@@ -113,6 +126,18 @@ public class Alignment {
 	public List<String> getSequences() {return seqs;}
 
 	/**
+ 	 * Return the alignment string that correponds to a specific
+ 	 * input row.
+ 	 *
+ 	 * @return alignment string
+ 	 */
+	public String getAlignmentString(int row) {
+		String inputSeq = seqs.get(row);
+		String[] splitStr = inputSeq.split("\t");
+		return alignmentMap.get(splitStr[0].trim());
+	}
+
+	/**
  	 * Return the % identity for all of the sequences in the alignment.
  	 *
  	 * @return the % identity
@@ -143,7 +168,9 @@ public class Alignment {
 		for (String key: alignmentMap.keySet()) {
 			if (key.equals(Align.CONSERVATION))
 				continue;
-			result += key+": "+alignmentMap.get(key)+"\n";
+			if (result.length() != 0)
+				result += "\n";
+			result += key+": "+alignmentMap.get(key);
 		}
 		return result;
 	}
@@ -212,6 +239,71 @@ public class Alignment {
 	}
 
 	/**
+ 	 * (Re)calculate the alignment score.  This differs from the
+ 	 * algorithm getASPScore in that we're going to actually determine
+ 	 * the conservation lines required to calculate our score rather
+ 	 * then relying on the alignment's conservation header.
+ 	 *
+ 	 * @return the updated score
+ 	 */
+	public double updateAlignmentScore() {
+		match = 0;
+		strong = 0;
+		weak = 0;
+		gaps = 0;
+		length = getAlignmentWidth();
+
+		for (int column=0; column < length; column++) {
+			Set<Character> residueColumn = new HashSet<Character>();
+			for (String sequenceKey: alignmentMap.keySet()) {
+				if (sequenceKey.equals(Align.CONSERVATION))
+					continue;
+				if (isEmpty(alignmentMap.get(sequenceKey))) {
+					gaps++;
+					continue;
+				}
+				residueColumn.add(alignmentMap.get(sequenceKey).toUpperCase().charAt(column));
+			}
+			if (residueColumn.contains(Character.valueOf('-'))) {
+				gaps++;
+			} else if (residueColumn.size() == 1) {
+				match++;
+			} else if (isInClass(residueColumn, strongClass)) {
+				strong++;
+			} else if (isInClass(residueColumn, weakClass)) {
+				weak++;
+			}
+		}
+
+		return calculateASPScore();
+	}
+
+	private double calculateASPScore() {
+		double Si = 1.0;
+		double Ss = 0.2;
+		double Sw = 0.1;
+		double Sg = -0.5;
+		alignmentScore = (Si*match + Ss*strong + Sw*weak + Sg*gaps)/length;
+		return alignmentScore;
+	}
+
+	private boolean isInClass(Set<Character> residueColumn, String[] residueClass) {
+		for (String residueGroup: residueClass) {
+			boolean isTrue = true;
+			for (Character c: residueColumn) {
+				if (residueGroup.indexOf(Character.toUpperCase(c.charValue())) < 0) {
+					isTrue = false;
+					break;
+				}
+			}
+			if (isTrue) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
  	 * This method updates a name map from a fasta sequence
  	 *
  	 * @param map the name map to update
@@ -263,5 +355,9 @@ public class Alignment {
 
 	private String seq2FastA(String name, String rawSeq) {
 		return ("> "+name+"\n"+rawSeq);
+	}
+
+	private boolean isEmpty(String sequence) {
+		return sequence.matches("[-]+[^a-zA-Z]");
 	}
 }

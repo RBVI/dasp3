@@ -37,8 +37,17 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import dasp.algorithms.AllByAllAlignment;
 import dasp.algorithms.FastAFileSearcher;
 import dasp.algorithms.DBSearch;
 import dasp.algorithms.ClustalAlign;
@@ -49,10 +58,6 @@ import dasp.model.Alignment;
 import dasp.model.DBSearchResult;
 import dasp.model.PSSM;
 import dasp.model.SearchResult;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * The DASP mainline.  Dasp expects as input a file which contains a series of PDB identifiers
@@ -85,6 +90,7 @@ public class Dasp {
 	private static String outputFile = null;
 	private static boolean vFlag = false;
 	private static File profilePath = null;
+
 
 	public Dasp () {
 	}
@@ -164,6 +170,8 @@ public class Dasp {
 					System.err.println("Unable to open directory '"+pdbDatabase+"': "+e.getMessage());
 					System.exit(1);
 				}
+				break;
+
 			case 'P':
 				String proFile = opts.optArg;
 				try {
@@ -215,9 +223,10 @@ public class Dasp {
 				String line = null;
 				while ((line = reader.readLine()) != null) {
 					ActiveSiteSignature sig = new ActiveSiteSignature(line, pdbPath);
+					String signature = sig.getSignature(radius);
 					asSigList.add(sig);
 					if (vFlag) {
-						System.out.println("Active Site Signature for: "+line.trim()+" is "+sig.getSignature(radius));
+						System.out.println("Active Site Signature for: "+line.trim()+" is "+signature);
 					}
 				}
 			} catch (Exception e) {
@@ -227,22 +236,66 @@ public class Dasp {
 			}
 
 			// 	2. Align the Active Site Signatures to create our Active Site Profile
-			//  After this call profile will contain the ASP score, alignment and identity score
-			profile = new ActiveSiteProfile(asSigList, new ClustalAlign(), radius);
+			// 	This step has been updated to split the alignment into two parts.  
+			// 	Part 1: align just the fragments that contain the active site key residues
+			// 	Part 2: align the rest of the fragments iteratively to find the best alignment
+			List<ActiveSiteProfile> profileList = new ArrayList<ActiveSiteProfile>();
+
+			// We'll use the longest signature (most # of fragments) as our template
+			ActiveSiteSignature longestSig = getLongestSig(asSigList);
+
+			// Go through each fragment and create a new profile for just the key fragment
+			for (int fragIndex = 0; fragIndex < longestSig.keyFragCount(); fragIndex++) {
+				List<ActiveSiteSignature> sigList = new ArrayList<ActiveSiteSignature>();
+				for (ActiveSiteSignature sig: asSigList) {
+					// Make sure we have the same number of key fragments
+					if (sig.keyFragCount() != longestSig.keyFragCount()) {
+						System.err.println("ActiveSiteSignature residue fragments inconsistent");
+						System.exit(2);
+					}
+					sigList.add(sig.getFragmentAsSig(fragIndex));
+				}
+
+				// The list of profiles will be concatenated later into a single profile
+				ActiveSiteProfile prof = new ActiveSiteProfile(sigList, new ClustalAlign(), radius);
+				profileList.add(prof);
+			}
+
+			// Part 2: Now, with the remaining fragments, we want to create the best possible
+			// alignments per fragment.  Again, we'll use our template signature to drive this
+			// XXX Change to align remaining fragments in order XXX
+			AllByAllAlignment aligner = new AllByAllAlignment(longestSig.getFragments().size(), radius, asSigList);
+			profileList.addAll(aligner.getBestProfiles());
+
 			if (vFlag) {
-				System.out.println("ActiveSiteProfile: \n"+profile.getAlignmentAsString());
+				for (ActiveSiteProfile prof: profileList) {
+					prof.updateAlignmentScore();
+					System.out.println("\nProfile fragment: ");
+					System.out.println(prof.getAlignmentAsString());
+					System.out.println("  Score: "+prof.getScore());
+				}
+			}
+
+			// Concatenate the profiles together
+			profile = ActiveSiteProfile.concatenate(profileList);
+			profile.updateAlignmentScore();
+			if (vFlag) {
+				System.out.println("\nActiveSiteProfile: \n"+profile.getAlignmentAsString());
+				System.out.println("  Score: "+profile.getScore()+"\n");
 			}
 		} else {
 			profile = new ActiveSiteProfile(profilePath);
 			if (vFlag) {
-				System.out.println("ActiveSiteProfile: \n"+profile.getAlignmentAsString());
+				System.out.println("\nActiveSiteProfile: \n"+profile.getAlignmentAsString());
+				System.out.println("  Score: "+profile.getScore()+"\n");
 			}
 		}
 
 		// 	3. Split the Active Site Profile into the individual fragments
 		List<Alignment>fragmentList = profile.findProfileFragments(new ClustalAlign());
 
-		// 	4. Realign the fragments --if all of the structures from step 3 are set up correctly then this should work just fine.
+		// 	4. Realign the fragments --if all of the structures from step 3 are set 
+		// 	up correctly then this should work just fine.
 		for (Alignment a: fragmentList) { 
 			a.doAlign(); 
 			if (vFlag) {
@@ -296,6 +349,19 @@ public class Dasp {
 		// 	TODO: search.combineResults();
 
 		// TODO: output final results
+	}
+
+	private static ActiveSiteSignature getLongestSig(List<ActiveSiteSignature> assList) {
+		int longest = -1;
+		ActiveSiteSignature longestSig = null;
+		for (ActiveSiteSignature as: assList) {
+			int count = as.getFragments().size();
+			if (count > longest)  {
+				longest = count;
+				longestSig = as;
+			}
+		}
+		return longestSig;
 	}
 
 	private static void usage() {

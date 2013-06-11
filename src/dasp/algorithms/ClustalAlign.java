@@ -44,10 +44,30 @@ public class ClustalAlign implements Align {
 	public double align(List<String> sequences) {
 
 		/**
-		 * Can possibly use the ClustalW java client, but I'm not sure how to get that working.
-		 * See the EBI CLustalW site for more information.
-		 */
-	
+ 		 * Look for situations where we have only one sequence and the rest
+ 		 * are dashes
+ 		 */
+		int nSequences = 0;
+		String singleSeq = null;
+		for (String s: sequences) {
+			String sp[] = s.split("\t");
+			if (!sp[1].equals("-")) {
+				singleSeq = sp[1];
+				nSequences++;
+			}
+		}
+		if (nSequences == 1) {
+			// Special case.  We only have one sequence, so we just construct an alignment
+			int length = singleSeq.length();
+			for (String s: sequences) {
+				String sp[] = s.split("\t");
+				if (sp[1].equals("-"))
+					sp[1] = pad("-", length);
+				alignMap.put(sp[0],sp[1]);
+			}
+			return 0.0;
+		}
+
 		/**
 		 * First need to save all seqs to a FASTA file for use with Clustal.
 		 */
@@ -175,10 +195,10 @@ public class ClustalAlign implements Align {
   /**
 	 * Return the alignment itself with each sequence as a single string and with dashes inserted
 	 * to account for insertions.
-     * Need to include the PDB id or structure id at the start of each line followed by some
-     * delimiter like spaces.  findProfileFragments() currently assumes spaces.
-     * Basically reads in the .aln file and formats it appropriatly.  Should we do the fragment thing here or elsewhere?
-     * We have the fragments, so why not do them at this step?
+	 * Need to include the PDB id or structure id at the start of each line followed by some
+	 * delimiter like spaces.  findProfileFragments() currently assumes spaces.
+	 * Basically reads in the .aln file and formats it appropriatly.  Should we do the fragment thing here or elsewhere?
+	 * We have the fragments, so why not do them at this step?
 	 *
 	 * @return the alignment
 	 */
@@ -229,7 +249,7 @@ public class ClustalAlign implements Align {
 						key = addLine(inLine, alignMap);
 					}
 
-					// manipualte block data
+					// manipulate block data
 					// get identity, strong, weak
 					lastLine = alignMap.get(CONSERVATION);
 					for(int i=0; i<lastLine.length(); i++){
@@ -251,7 +271,10 @@ public class ClustalAlign implements Align {
 
 					// get gaps
 					int[] gaps = null;
-					for(String line: alignMap.values()) {
+					for(String k: alignMap.keySet()) {
+						if (k == CONSERVATION) continue;
+
+						String line = alignMap.get(key);
 						if (gaps == null)  {
 							alnLength = line.length();
 							gaps = new int [alnLength];
@@ -316,6 +339,14 @@ public class ClustalAlign implements Align {
 				seq[i] = formatted.charAt(formattedPointer++);
 		}
 		return new String(seq);
+	}
+
+	private String pad(String padChar, int num) {
+		String padRet = "";
+		for (int i = 0; i < num; i++) {
+			padRet += padChar;
+		}
+		return padRet;
 	}
 
 	private void printAlignment() {
