@@ -46,6 +46,7 @@ import dasp.algorithms.Align;
  * the ActiveSiteSignatures of a group of structures.
  */
 public class ActiveSiteProfile extends Alignment {
+	List<ActiveSiteSignature>signatureList = null;
 
 	// NOTE: this assumes that each profile contains a single column (one fragment)
 	static public ActiveSiteProfile concatenate(List<ActiveSiteProfile> profileList) {
@@ -81,6 +82,7 @@ public class ActiveSiteProfile extends Alignment {
 			alignmentMap.put(pdbId, alignment.get(strIndex));
 			// NOTE: not updating name map at this point
 		}
+		method = template.method;
 	}
 
 	public ActiveSiteProfile(List<ActiveSiteSignature>signatureList, Align alignmentMethod, double radius) {
@@ -111,8 +113,11 @@ public class ActiveSiteProfile extends Alignment {
 		// System.out.println(getAlignmentAsString());
 	}
 
-	public ActiveSiteProfile(File profilePath) {
+	public ActiveSiteProfile(File profilePath, Align alignmentMethod) {
 		super();
+
+		method = alignmentMethod;
+
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(profilePath));
 			String line = null;
@@ -157,7 +162,7 @@ public class ActiveSiteProfile extends Alignment {
 	 * @return a list of Alignment objects where each contains the fragments in the motif.
 	 * Note the profile fragments returned are not yet aligned.  The aligning is done in Main.
 	 */
-	public List<Alignment> findProfileFragments(Align alnMethod) {
+	public List<Alignment> findProfileFragments(boolean stripAlign) {
 
 		List<Alignment>FragList = null;
 		int numPDBs = seqs.size();
@@ -192,7 +197,7 @@ public class ActiveSiteProfile extends Alignment {
 
 		//loops through each column i of the alignment
 		while(column < end){
-			Alignment alignment = new ProfileFragment(alnMethod.NewAlignFactory());
+			Alignment alignment = new ProfileFragment(method.NewAlignFactory());
 			int minBox = end;
 			int minIndex = -1; //this is the row/sequence with the current minimum length fragment starting at position i
 			//loops through each sequence in the alignemnt (each row k)
@@ -243,11 +248,11 @@ public class ActiveSiteProfile extends Alignment {
 						}
 						if(tempBound != -1) {//if tempBound is not -1 then we are adding it to the motif
 							counter++;
-							alignment.addSequence(names.get(row), unAlignString(sequences[row], boxColumn-1, tempBound));
+							alignment.addSequence(names.get(row), unAlignString(sequences[row], boxColumn-1, tempBound, stripAlign));
 						}
 						//
 					} else {
-						alignment.addSequence(names.get(minIndex), unAlignString(sequences[minIndex], column, boxEnd));
+						alignment.addSequence(names.get(minIndex), unAlignString(sequences[minIndex], column, boxEnd, stripAlign));
 					}
 				}
 				//if at least 50% of the sequences are included in the motif then consider it a motif for searching
@@ -340,8 +345,10 @@ public class ActiveSiteProfile extends Alignment {
 			return (curPos - 1 - gapCounter);
 	}
 
-	private String unAlignString (String alignedString, int start, int end) {
-		String str = alignedString.substring(start, end+1).replace("-","");
+	private String unAlignString (String alignedString, int start, int end, boolean stripAlign) {
+		String str = alignedString.substring(start, end+1);
+		if (stripAlign)
+			return str.replace("-","");
 		return str;
 	}
 }

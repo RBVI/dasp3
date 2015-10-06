@@ -132,6 +132,14 @@ public class ActiveSiteSignature {
 		return residueFrags.size();
 	}
 
+	public int fragCount() {
+		return residueFrags.size()+otherFrags.size();
+	}
+
+	public List<Residue> getKeyResidues() {
+		return keyResidues;
+	}
+
 	public void removeFragment(int fragment) {
 		if (fragment >= fragments.size())
 			return;
@@ -220,83 +228,67 @@ public class ActiveSiteSignature {
    * @return  Returns the list of fragments that are within the defined radius of at least 1 key residue.
    */
 	private List<SequenceFragment> calculateASSig(double radius) {
-			List<SequenceFragment> returnFrags = new ArrayList<SequenceFragment>();
-			residueFrags = new ArrayList<SequenceFragment>();
-			otherFrags = new ArrayList<SequenceFragment>();
-	
-			//not sure this is the best way to start this off.
-			SequenceFragment tempFrag = new SequenceFragment();  //starts the first fragment object
-			int prevResId = 0;  //initializes the previous residue ID
-			boolean haveKey = false;
-			for (Residue curRes: struct.getResidues())
-			{ 
-				for (Residue keyRes: keyResidues)
+		List<SequenceFragment> returnFrags = new ArrayList<SequenceFragment>();
+		residueFrags = new ArrayList<SequenceFragment>();
+		otherFrags = new ArrayList<SequenceFragment>();
+
+		//not sure this is the best way to start this off.
+		SequenceFragment tempFrag = new SequenceFragment();  //starts the first fragment object
+		int prevResId = 0;  //initializes the previous residue ID
+		boolean haveKey = false;
+		for (Residue curRes: struct.getResidues())
+		{ 
+			for (Residue keyRes: keyResidues)
+			{
+				// System.out.println("Comparing: "+curRes.getAA()+" to "+keyRes.getAA());
+				//get centers
+				//compare centers
+				double EDdist = keyRes.dist(curRes);
+				
+				//test for within radius
+				if(EDdist <= radius && EDdist >= -radius)
 				{
-					// System.out.println("Comparing: "+curRes.getAA()+" to "+keyRes.getAA());
-					//get centers
-					//compare centers
-					double EDdist = dist(keyRes, curRes);
-					
-					//test for within radius
-					if(EDdist <= radius && EDdist >= -radius)
-					{
-							if(prevResId > 0 && curRes.getIndex() != prevResId+1)
-							{
-								if (tempFrag.getResidueCount() >= 4) {
-									returnFrags.add(tempFrag);
-									if (haveKey)
-										residueFrags.add(tempFrag);
-									else
-										otherFrags.add(tempFrag);
-								}
-								tempFrag = new SequenceFragment();
-								haveKey = false;
+						if(prevResId > 0 && curRes.getIndex() != prevResId+1)
+						{
+							if (tempFrag.getResidueCount() >= 4) {
+								returnFrags.add(tempFrag);
+								if (haveKey)
+									residueFrags.add(tempFrag);
+								else
+									otherFrags.add(tempFrag);
 							}
+							tempFrag = new SequenceFragment();
+							haveKey = false;
+						}
 
-							int keyIndex = keyResidues.indexOf(curRes);
-							tempFrag.addFragRes(curRes, keyIndex); //if true, add residue to fragments list and break
-							if (keyIndex >= 0) haveKey = true;
+						int keyIndex = keyResidues.indexOf(curRes);
+						tempFrag.addFragRes(curRes, keyRes, keyIndex); //if true, add residue to fragments list and break
+						if (keyIndex >= 0) haveKey = true;
 
-							prevResId = curRes.getIndex();
-							break;
-					} 
-					//if false move onto next keyRes
-				}
-
+						prevResId = curRes.getIndex();
+						break;
+				} 
+				//if false move onto next keyRes
 			}
 
-			if (tempFrag.getResidueCount() >= 4) {
-				if (haveKey)
-					residueFrags.add(tempFrag);
-				else
-					otherFrags.add(tempFrag);
-
-				returnFrags.add(tempFrag); // Add the last fragment
-			}
-
-			//By this point we should have all our fragments that are within the radius
-			//of the active site keyResidues, they should be in sequencial order,
-			//and each of the consecutive fragments is stored in a different fragment object.
-	
-			return returnFrags;
 		}
-	
-	/**
-	 * Calculates the Euclidean distance between two residue centers
-	 * 
-	 * @param r1 First residue
-	 * @param r2 Second residue
-	 * @return the Euclidean distance between the 2 residue centers as a double value.
-	 */
-	public double dist(Residue r1, Residue r2){
-		Location loc1 = r1.getCenter();
-		Location loc2 = r2.getCenter();
-		
-		return Math.sqrt(Math.pow((loc2.getX() - loc1.getX()), 2) + 
-				Math.pow((loc2.getY() - loc1.getY()), 2) +
-				Math.pow((loc2.getZ() - loc1.getZ()), 2));
-	} //end dist
 
+		if (tempFrag.getResidueCount() >= 4) {
+			if (haveKey)
+				residueFrags.add(tempFrag);
+			else
+				otherFrags.add(tempFrag);
+
+			returnFrags.add(tempFrag); // Add the last fragment
+		}
+
+		//By this point we should have all our fragments that are within the radius
+		//of the active site keyResidues, they should be in sequencial order,
+		//and each of the consecutive fragments is stored in a different fragment object.
+
+		return returnFrags;
+	}
+	
 	/**
  	 * Extend an alignment string.  NOTE: this method only operates on the
  	 * first fragment.  It assumes that this is being used in fragment-oriented

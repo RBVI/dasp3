@@ -69,6 +69,22 @@ public class Residue {
 		return center;
 	}
 
+	/**
+	 * Calculates the Euclidean distance between this residue center and
+	 * a second residue center
+	 * 
+	 * @param r Second residue
+	 * @return the Euclidean distance between the 2 residue centers as a double value.
+	 */
+	public double dist(Residue r){
+		Location loc1 = getCenter();
+		Location loc2 = r.getCenter();
+		
+		return Math.sqrt(Math.pow((loc2.getX() - loc1.getX()), 2) + 
+				Math.pow((loc2.getY() - loc1.getY()), 2) +
+				Math.pow((loc2.getZ() - loc1.getZ()), 2));
+	} //end dist
+
 	public String getPDBCode() {
 		return this.PDBcode;
 	}

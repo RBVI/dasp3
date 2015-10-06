@@ -51,6 +51,7 @@ import dasp.algorithms.AllByAllAlignment;
 import dasp.algorithms.FastAFileSearcher;
 import dasp.algorithms.DBSearch;
 import dasp.algorithms.ClustalAlign;
+import dasp.algorithms.NullAlign;
 import dasp.algorithms.RyansPSSMSearch;
 import dasp.model.ActiveSiteProfile;
 import dasp.model.ActiveSiteSignature;
@@ -67,6 +68,8 @@ import dasp.model.SearchResult;
  *		Basic flow of the DASP algorithm:
  *		1. Read our input file and create the Active Site Signatures
  *		2. Align the Active Site Signatures to create our Active Site Profile
+ *			2.1: Align just the fragments that contain the active site key residues
+ *      2.2: Align the rest of the fragments iteratively to find the best alignment (FIXME)
  *		3. Split the Active Site Profile into the individual fragments
  *		4. Realign the fragments
  *		5. Create the Position-Specific Scoring Matrices
@@ -89,8 +92,10 @@ public class Dasp {
 	private static double radius = 10;
 	private static String outputFile = null;
 	private static boolean vFlag = false;
-	private static File profilePath = null;
-
+  private static File signaturePath = null;
+  private static File profilePath = null;
+  private static boolean includeX = false;
+  private static int numThreads = 2;
 
 	public Dasp () {
 	}
@@ -105,6 +110,10 @@ public class Dasp {
 	 * <b>-p</b> <i>pdbDatabase</i>	The path to the pdb database
 	 * <b>-o</b> <i>filename</i>	The file to wite the active stie profile into
 	 * <b>-d</b> <i>database</i>	The database to use for the sequence search
+	 * <b>-t</b> <i>threads</i>	The number of threads to use for the database search
+	 * <b>-P</b> <i>profile file</i>  Directly input the profile
+	 * <b>-S</b> <i>signature file</i>  Directly input the signatures
+	 * <b>-x</b> include 'X's in the PSSM
 	 * <b>-h</b> the help text
 	 */
 	public static void main(String[] args) throws InterruptedException{
@@ -115,7 +124,7 @@ public class Dasp {
 		//First is always a file name, second is always the number of lines
 		//and the third is always a new profile radius.
 
-		GetOpt opts = new GetOpt(args, "i:c:p:o:d:r:P:hv");
+		GetOpt opts = new GetOpt(args, "i:c:p:o:d:r:S:P:t:hvx");
 
 		int result;
 		while ((result = opts.getopt()) >= 0) {
@@ -177,9 +186,33 @@ public class Dasp {
 				try {
 					profilePath = new File(proFile);
 				} catch (Exception e) {
-					System.err.println("Unable to open profile '"+proFile+"': "+e.getMessage());
+					System.err.println("Unable to open signatures '"+proFile+"': "+e.getMessage());
 					System.exit(1);
 				}
+				break;
+
+			case 'S':
+        String sigFile = opts.optArg;
+        try {
+          signaturePath = new File(sigFile);
+        } catch (Exception e) {
+          System.err.println("Unable to open signatures '"+sigFile+"': "+e.getMessage());
+          System.exit(1);
+        }
+        break;
+
+      case 't':
+        try {
+          numThreads = new Integer(opts.optArg);
+        } catch (Exception e) {
+          System.err.println("Threads argument must be an integer");
+          System.exit(1);
+        }
+        break;
+
+			case 'x':
+				includeX = true;
+				break;
 
 			case 'v':
 				vFlag = true;
@@ -195,7 +228,7 @@ public class Dasp {
 			}
 		}
 
-		if (inputFile == null && profilePath == null) {
+		if (inputFile == null && profilePath == null && signaturePath == null) {
 			System.err.println("Must provide an input file!");
 			usage();
 			System.exit(1);
@@ -214,9 +247,10 @@ public class Dasp {
 		File dbFile = new File(database);
 
 		List<ActiveSiteSignature> asSigList = new ArrayList();
-		ActiveSiteProfile	profile;
+		ActiveSiteProfile	profile = null;
+		List<Alignment>fragmentList = null;
 
-		if (profilePath == null) {
+		if (signaturePath == null && profilePath == null) {
 			// 	1. Read our input file and create the Active Site Signatures
 			try {
 				BufferedReader reader = new BufferedReader(new FileReader(inputFile));
@@ -238,13 +272,12 @@ public class Dasp {
 			// 	2. Align the Active Site Signatures to create our Active Site Profile
 			// 	This step has been updated to split the alignment into two parts.  
 			// 	Part 1: align just the fragments that contain the active site key residues
-			// 	Part 2: align the rest of the fragments iteratively to find the best alignment
 			List<ActiveSiteProfile> profileList = new ArrayList<ActiveSiteProfile>();
 
 			// We'll use the longest signature (most # of fragments) as our template
 			ActiveSiteSignature longestSig = getLongestSig(asSigList);
 
-			// Go through each fragment and create a new profile for just the key fragment
+			// Go through each fragment and create a new profile for just the key fragments
 			for (int fragIndex = 0; fragIndex < longestSig.keyFragCount(); fragIndex++) {
 				List<ActiveSiteSignature> sigList = new ArrayList<ActiveSiteSignature>();
 				for (ActiveSiteSignature sig: asSigList) {
@@ -260,12 +293,31 @@ public class Dasp {
 				ActiveSiteProfile prof = new ActiveSiteProfile(sigList, new ClustalAlign(), radius);
 				profileList.add(prof);
 			}
+			int nextFrag = longestSig.keyFragCount();
 
 			// Part 2: Now, with the remaining fragments, we want to create the best possible
 			// alignments per fragment.  Again, we'll use our template signature to drive this
 			// XXX Change to align remaining fragments in order XXX
-			AllByAllAlignment aligner = new AllByAllAlignment(longestSig.getFragments().size(), radius, asSigList);
-			profileList.addAll(aligner.getBestProfiles());
+			/* AllByAllAlignment aligner = new AllByAllAlignment(longestSig.getFragments().size(), radius, asSigList);
+			for (int keyIndex = 0; keyIndex < longestSig.getKeyResidues().size(); keyIndex++) { 
+				List<ActiveSiteSignature> sigList = new ArrayList<ActiveSiteSignature>();
+				for (ActiveSiteSignature sig: asSigList) {
+					sigList.add(sig.getClosestFragmentAsSig(keyIndex));
+				}
+				ActiveSiteProfile prof = new ActiveSiteProfile(sigList, new ClustalAlign(), radius);
+				profileList.add(prof);
+			}
+			*/
+
+			// Part 3: Now align all the remaining fragments in N-C order.
+			for (int fragIndex = nextFrag; fragIndex < longestSig.fragCount(); fragIndex++) {
+				List<ActiveSiteSignature> sigList = new ArrayList<ActiveSiteSignature>();
+				for (ActiveSiteSignature sig: asSigList) {
+					sigList.add(sig.getFragmentAsSig(fragIndex));
+				}
+				ActiveSiteProfile prof = new ActiveSiteProfile(sigList, new ClustalAlign(), radius);
+				profileList.add(prof);
+			}
 
 			if (vFlag) {
 				for (ActiveSiteProfile prof: profileList) {
@@ -283,16 +335,27 @@ public class Dasp {
 				System.out.println("\nActiveSiteProfile: \n"+profile.getAlignmentAsString());
 				System.out.println("  Score: "+profile.getScore()+"\n");
 			}
-		} else {
-			profile = new ActiveSiteProfile(profilePath);
+			// 	3. Split the Active Site Profile into the individual fragments
+			fragmentList = profile.findProfileFragments(true);
+		} else if (signaturePath != null) {
+			profile = new ActiveSiteProfile(signaturePath, new ClustalAlign());
+			profile.doAlign();
+			if (vFlag) {
+				System.out.println("\nActiveSiteProfile: \n"+profile.getAlignmentAsString());
+			}
+			// 	3. Split the Active Site Profile into the individual fragments
+			fragmentList = profile.findProfileFragments(true);
+		} else if (profilePath != null) {
+			profile = new ActiveSiteProfile(profilePath, new NullAlign());
+			profile.doAlign();
 			if (vFlag) {
 				System.out.println("\nActiveSiteProfile: \n"+profile.getAlignmentAsString());
 				System.out.println("  Score: "+profile.getScore()+"\n");
 			}
+			// 	3. Split the Active Site Profile into the individual fragments
+			fragmentList = profile.findProfileFragments(false);
 		}
 
-		// 	3. Split the Active Site Profile into the individual fragments
-		List<Alignment>fragmentList = profile.findProfileFragments(new ClustalAlign());
 
 		// 	4. Realign the fragments --if all of the structures from step 3 are set 
 		// 	up correctly then this should work just fine.
@@ -306,7 +369,7 @@ public class Dasp {
 		// 	5. Create the Position-Specific Scoring Matrices
 		List<PSSM>pssmList = new ArrayList();
 		for (Alignment a: fragmentList) { 
-			PSSM pssm = new PSSM(a);
+			PSSM pssm = new PSSM(a, includeX);
 			pssmList.add(pssm); 
 		}
 
@@ -316,20 +379,21 @@ public class Dasp {
 		// 	6. Search the sequence database using the PSSMs
 		DBSearch searcher = new FastAFileSearcher();
 		try {
-			List<DBSearchResult> searchResults = searcher.search(dbFile, pssmList, new RyansPSSMSearch(), cutoff);
+			List<DBSearchResult> searchResults = searcher.search(dbFile, pssmList, 
+			                                                     new RyansPSSMSearch(includeX), cutoff, numThreads);
 
 			Collections.sort(searchResults);  //search results are sorted on pvalue
 
 			outputStream.println("\n\n"+searchResults.size()+" Total Database Search Results\n");
 			outputStream.print("Pvalue\tSeqName\tPseudosig\t");
 			for(int i=0; i<pssmList.size(); i++){
-				outputStream.print("Index"+i+"\tMatchingSubSeq"+i+"\t");
+				outputStream.print("Index"+i+"\tMatchingSubSeq"+i+"\tPvalue"+i+"\t");
 			}
 			for(DBSearchResult r: searchResults){
 				outputStream.print("\n"+r.getPval()+"\t"+r.getName()+"\t"+r.getPseudoSig()+"\t");
 				SearchResult[] matches = r.getPssmMatches();
 				for(SearchResult s: matches){
-					outputStream.print(s.getIndex()+"\t"+r.getFullSeq().substring(s.getIndex(), s.getIndex()+s.getPssmLength())+"\t");
+					outputStream.print(s.getIndex()+"\t"+r.getFullSeq().substring(s.getIndex(), s.getIndex()+s.getPssmLength())+"\t"+s.getPvalue()+"\t");
 				}
 			}
 
@@ -371,9 +435,12 @@ public class Dasp {
 	 	System.out.println("    -r radius	The radius for inclusion into the active site signature");
 	 	System.out.println("    -c cutoff	The cutoff value for searching the sequence database");
 	 	System.out.println("    -p pdbDatabase	The path to the pdb database");
+    System.out.println("    -P profile  The path to the active site profile");
+    System.out.println("    -S signature  The path to the active site signature");
 	 	System.out.println("    -o filename	The file to wite the active stie profile into");
 	 	System.out.println("    -d database	The database to use for the sequence search");
 	 	System.out.println("    -h the help text");
 	 	System.out.println("    -v print verbose output");
+    System.out.println("    -x include X in the PSSMs");
 	}
 }

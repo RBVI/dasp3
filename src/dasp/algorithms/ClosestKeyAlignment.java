@@ -1,5 +1,6 @@
 /**
- * The Align interface provides a general method to call various sequence alignment algorithms
+ * Align fragments based on the closest key residue.  Essentially, align them such
+ * that those closest to residue 1 are aligned first, etc.
  *
  */
 
@@ -15,22 +16,30 @@ import java.util.TreeMap;
 import dasp.model.ActiveSiteProfile;
 import dasp.model.ActiveSiteSignature;
 
-public class AllByAllAlignment {
+public class ClosestKeyAlignment {
 	private Map<ActiveSiteProfile, List<ActiveSiteSignature>> profileMap = null;
 	private Map<ActiveSiteSignature, List<ActiveSiteProfile>> signatureMap = null;
 	private SortedMap<Double, List<ActiveSiteProfile>> orderedMap = null;
 	private int fragCount;
 	private double radius;
 
-	public AllByAllAlignment (int fragCount, double radius, List<ActiveSiteSignature> signatures) {
+	public ClosestKeyAlignment (int fragCount, double radius, List<ActiveSiteSignature> signatures) {
 		this.fragCount = fragCount;
 		this.radius = radius;
 		profileMap = new HashMap<ActiveSiteProfile, List<ActiveSiteSignature>>();
 		signatureMap = new HashMap<ActiveSiteSignature, List<ActiveSiteProfile>>();
 		orderedMap = new TreeMap<Double, List<ActiveSiteProfile>>();
-		getAllAlignments(new ArrayList<ActiveSiteSignature>(), signatures);
+		getClosestKeyAlignments(signatures);
 	}
 
+	public void getClosestKeyAlignments(List<ActiveSiteSignature> sigList) {
+		// For each key residue
+		//    For each signature
+		//       Get the closest fragment & add it to the list
+		//    Create a profile & update
+	}
+
+/*
 	public void getAllAlignments(List<ActiveSiteSignature> fragList, 
 	                             List<ActiveSiteSignature> sigList) {
 
@@ -48,6 +57,7 @@ public class AllByAllAlignment {
 		}
 		return;
 	}
+*/
 
 	public List<ActiveSiteProfile>getBestProfiles() {
 		return bestProfiles();

@@ -16,5 +16,5 @@ import dasp.model.DBSearchResult;
 
 public interface DBSearch {
 	public List<DBSearchResult> search(File database, List<PSSM>pssmList, 
-	                                   PSSMSearch searchAlg, double threashold) throws Exception;
+	                                   PSSMSearch searchAlg, double threashold, int numThreads) throws Exception;
 }

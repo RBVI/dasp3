@@ -2,6 +2,7 @@
 	 Done.
 
 2. Align based on fragments rather than the entire signature
+   UPDATE: align the key residue fragments and then align the rest of the fragments in order
 
 3. Use the longest fragment to form a motif rather than the shortest fragment
 

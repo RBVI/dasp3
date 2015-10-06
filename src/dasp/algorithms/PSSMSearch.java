@@ -13,5 +13,5 @@ import dasp.model.PSSM;
 import dasp.model.SearchResult;
 
 interface PSSMSearch {
-	SearchResult[] search(List<PSSM>pssmList, String sequence, int xCount);
+	SearchResult[] search(List<PSSM>pssmList, String sequence, int xCount, boolean debug);
 }

@@ -60,7 +60,10 @@ public class PSSM implements Comparable {
 	private double PSSMmatrix[][] = null;
 	private Alignment alignment;
 	private static final double PSEUDOCOUNT_WEIGHT = 0.1;
+	private static final String aaListX = "ACDEFGHIKLMNPQRSTVWXY";
 	private static final String aaList = "ACDEFGHIKLMNPQRSTVWY";
+	private int aaCount = 20;  // Switches between 20 and 21
+	private boolean includeX = false;
 	
 	/**
 	 * Steps to getting the PSSM object loaded
@@ -71,10 +74,13 @@ public class PSSM implements Comparable {
 	 * 3) sort the PSSMs by length -- have to search database using longest motif to shortest
 	 * sort(pssmList);
 	 */
-	public PSSM (Alignment profileFragAlignment) {
+	public PSSM (Alignment profileFragAlignment, boolean includeX) {
 		alignment = profileFragAlignment;
-		PSSMmatrix = new double [20][alignment.getAlignmentWidth()];
-		createPSSM();
+		this.includeX = includeX;
+		if (includeX) aaCount = 21;
+
+		PSSMmatrix = new double [aaCount][alignment.getAlignmentWidth()];
+		createPSSM(includeX);
 	}
 
 	public double[][] getPSSM() {
@@ -89,7 +95,7 @@ public class PSSM implements Comparable {
 
 	public String toString() {
 		String pssm = "";
-		for(int aa = 0; aa < 20; aa++) {
+		for(int aa = 0; aa < aaCount; aa++) {
 			pssm += numToAA(aa)+"\t";
 			for(int position = 0; position < getWidth(); position++){
 				pssm += ""+PSSMmatrix[aa][position]+"\t";
@@ -110,14 +116,17 @@ public class PSSM implements Comparable {
 	 * NEEDS LOTS OF WORK...Just plopped in code.
 	 *
 	 */
-	private void createPSSM() {
+	private void createPSSM(boolean includeX) {
 		int alignmentLength = alignment.getAlignmentWidth();
 		int numSeqs = alignment.getAlignment().size();
 
 		//initilize the PSSM matrix to zero. k = rows (AAs), m = columns(motif positions)
-		for(int aa = 0; aa < 20; aa++)
+		for(int aa = 0; aa < aaCount; aa++)
 			for(int position = 0; position < alignmentLength; position++)
-				PSSMmatrix[aa][position] = 0;
+				if (includeX)
+					PSSMmatrix[aa][position] = PSEUDOCOUNT_WEIGHT*aaFreqX[aa];
+				else
+					PSSMmatrix[aa][position] = PSEUDOCOUNT_WEIGHT*aaFreq[aa];
 
 		//ok, we are looping through each row of each column, so the first motif position is loop through all the way down followed by the second etc. Instead of looping through each column of each row.
 		for (String alignedString: alignment.getAlignment()) {
@@ -131,15 +140,19 @@ public class PSSM implements Comparable {
 		}
 
 		//back to k = AAs and m = motif positions
-		for(int aa = 0; aa < 20; aa++) {
+		for(int aa = 0; aa < aaCount; aa++) {
 			for(int position = 0; position < alignmentLength; position++){
 				NumberFormat nf = NumberFormat.getNumberInstance();
 				nf.setMaximumFractionDigits(0);
-				//b is a global variable and is equal to 0.1
-				PSSMmatrix[aa][position] += PSEUDOCOUNT_WEIGHT*aaFreq[aa];
+				//PSEUDOCOUNT_WEIGHT is a global variable and is equal to 0.1
 				PSSMmatrix[aa][position] /= ((double)(PSEUDOCOUNT_WEIGHT + numSeqs));
-				double temp = Math.log(PSSMmatrix[aa][position]);
-				PSSMmatrix[aa][position] = Double.parseDouble(nf.format(temp));
+				if (PSSMmatrix[aa][position] > 0.0) {
+					double temp = Math.log(PSSMmatrix[aa][position]);
+					PSSMmatrix[aa][position] = Double.parseDouble(nf.format(temp));
+				} else {
+					// X
+					PSSMmatrix[aa][position] = -10.0;
+				}
 			}
 		}
 	}
@@ -151,12 +164,18 @@ public class PSSM implements Comparable {
 		return true;
 	}
 
-	public static int getAANum(char aa) {
-		return aaList.indexOf(aa);
+	public int getAANum(char aa) {
+		if (includeX)
+			return aaListX.indexOf(aa);
+		else
+			return aaList.indexOf(aa);
 	}
 
-	public static char numToAA(int anum) {
-		return aaList.charAt(anum);
+	public char numToAA(int anum) {
+		if (includeX)
+			return aaListX.charAt(anum);
+		else
+			return aaList.charAt(anum);
 	}
 
     public String getProfileFragAlignment(){
@@ -184,6 +203,30 @@ public class PSSM implements Comparable {
 				0.057519733774898316,	// THR
 				0.07181807951384982,	// VAL
 				0.013960741443338746,	// TRP
+				0.035430767004806844	// TYR
+	};
+
+	private static final double[] aaFreqX = {
+				0.07843351606835683,	// ALA
+				0.015193800942076749,	// CYS
+				0.0582383486327026,		// ASP
+				0.06565599729916563,	// GLU
+				0.04031959873318007,	// PHE
+				0.07247078115203447,	// GLY
+				0.023592109705319678,	// HIS
+				0.05868044949600502,	// ILE
+				0.0605951481439802,		// LYS
+				0.08932848897963121,	// LEU
+				0.022564828062955164,	// MET
+				0.044698808739128335,	// ASN
+				0.04393357233573943,	// PRO
+				0.03837596257415237,	// GLN
+				0.04933041814703471,	// ARG
+				0.05985724161214089,	// SER
+				0.057519733774898316,	// THR
+				0.07181807951384982,	// VAL
+				0.013960741443338746,	// TRP
+				0.0,                  // X -- actually doesn't matter since we skip over "X"s anyways
 				0.035430767004806844	// TYR
 	};
 
