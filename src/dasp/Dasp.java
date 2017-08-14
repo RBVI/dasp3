@@ -47,7 +47,7 @@ import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import dasp.algorithms.AllByAllAlignment;
+// import dasp.algorithms.AllByAllAlignment;
 import dasp.algorithms.FastAFileSearcher;
 import dasp.algorithms.DBSearch;
 import dasp.algorithms.ClustalAlign;
